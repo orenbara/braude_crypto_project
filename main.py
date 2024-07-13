@@ -12,6 +12,8 @@ def main():
     try:
         print("Generating RSA keypair...")
         rsa_public_key, rsa_private_key = generate_rsa_keypair()
+        print(f"rsa_private_key: {rsa_private_key}")
+        print(f"rsa_public_key: {rsa_public_key}")
         print("RSA keypair generated successfully.")
 
         print("Generating EC keypair...")
