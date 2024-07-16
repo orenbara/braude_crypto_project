@@ -1,4 +1,4 @@
-import random
+import secrets
 
 # Elliptic curve parameters (using NIST P-256 curve)
 p = 0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff
@@ -9,6 +9,16 @@ Gy = 0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5
 n = 0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551
 
 def mod_inverse(a, m):
+    """
+    Compute the modular inverse of a under modulo m using the extended Euclidean algorithm.
+    
+    Args:
+        a (int): The number to find the inverse of.
+        m (int): The modulus.
+    
+    Returns:
+        int: The modular inverse of a under m.
+    """
     if a == 0:
         return 0
     lm, hm = 1, 0
@@ -20,12 +30,31 @@ def mod_inverse(a, m):
     return lm % m
 
 def is_on_curve(point):
+    """
+    Check if a point is on the elliptic curve.
+    
+    Args:
+        point (tuple): The point (x, y) to check.
+    
+    Returns:
+        bool: True if the point is on the curve, False otherwise.
+    """
     if point is None:
         return True
     x, y = point
     return (y * y - x * x * x - a * x - b) % p == 0
 
 def point_add(P1, P2):
+    """
+    Add two points on the elliptic curve.
+    
+    Args:
+        P1 (tuple): The first point (x, y).
+        P2 (tuple): The second point (x, y).
+    
+    Returns:
+        tuple: The resulting point after addition.
+    """
     if P1 is None:
         return P2
     if P2 is None:
@@ -41,6 +70,16 @@ def point_add(P1, P2):
     return (x3, y3)
 
 def scalar_mult(k, P):
+    """
+    Perform scalar multiplication of a point on the elliptic curve.
+    
+    Args:
+        k (int): The scalar to multiply.
+        P (tuple): The point (x, y) to multiply.
+    
+    Returns:
+        tuple: The resulting point after multiplication.
+    """
     Q = None
     for i in range(256):
         if k & (1 << i):
@@ -49,18 +88,44 @@ def scalar_mult(k, P):
     return Q
 
 def generate_keypair():
-    private_key = random.randint(1, n - 1)
+    """
+    Generate an elliptic curve key pair.
+    
+    Returns:
+        tuple: The private key and the public key.
+    """
+    private_key = secrets.randbelow(n - 1) + 1  # secrets.randbelow(n) generates a number in range [0, n-1]
     public_key = scalar_mult(private_key, (Gx, Gy))
     return private_key, public_key
 
 def encrypt_key(public_key, plaintext):
-    k = random.randint(1, n - 1)
+    """
+    Encrypt a plaintext using the recipient's public key.
+    
+    Args:
+        public_key (tuple): The recipient's public key (x, y).
+        plaintext (int): The plaintext to encrypt.
+    
+    Returns:
+        tuple: The ciphertext consisting of the ephemeral public key and the encrypted message.
+    """
+    k = secrets.randbelow(n - 1) + 1
     C1 = scalar_mult(k, (Gx, Gy))
     S = scalar_mult(k, public_key)
     C2 = (plaintext * S[0]) % p
     return (C1, C2)
 
 def decrypt_key(private_key, ciphertext):
+    """
+    Decrypt a ciphertext using the recipient's private key.
+    
+    Args:
+        private_key (int): The recipient's private key.
+        ciphertext (tuple): The ciphertext consisting of the ephemeral public key and the encrypted message.
+    
+    Returns:
+        int: The decrypted plaintext.
+    """
     C1, C2 = ciphertext
     S = scalar_mult(private_key, C1)
     plaintext = (C2 * mod_inverse(S[0], p)) % p
