@@ -76,6 +76,8 @@ Encrypt a message (in this case, the SALSA20 key) using ECC El-Gamal encryption
 """
 
 def encode_plaintext_as_point(plaintext):
+    # Ensure plaintext is 32 bytes long
+    assert len(plaintext) == 32, "Plaintext must be exactly 32 bytes"
     x = int.from_bytes(plaintext, byteorder='big') % p
     while True:
         y_square = (x * x * x + a * x + b) % p
@@ -84,36 +86,34 @@ def encode_plaintext_as_point(plaintext):
             return (x, y)
         x = (x + 1) % p
 
+
 def decode_point_as_plaintext(point):
     x, y = point
     return x.to_bytes(32, byteorder='big')
 
 
-
 def encrypt_key(public_key, plaintext):
+    # Ensure plaintext is exactly 32 bytes long
+    assert len(plaintext) == 32, "Plaintext must be exactly 32 bytes"
+
+    # Convert plaintext to elliptic curve point
+    plaintext_point = encode_plaintext_as_point(plaintext)
+
     # Chooses a random k for this encryption.
     k = random.randint(1, n - 1)
     C1 = scalar_mult(k, (Gx, Gy))
     S = scalar_mult(k, public_key)
 
-    # Example 32-byte random value
-    random_value = b'\x01' * 32  # Replace with your 32-byte random value
-    print("b4 ------------ decoded",plaintext)
-
-
-    plaintext_converted_to_point = encode_plaintext_as_point(plaintext)
-
-    print("b4 ------------ encoded",plaintext_converted_to_point)
-    C2 = point_add(plaintext_converted_to_point, S)
+    # Add the plaintext point to S to form C2
+    C2 = point_add(plaintext_point, S)
     return (C1, C2)
-
+"""
 def decrypt_key(private_key, ciphertext):
     C1, C2 = ciphertext
     S = scalar_mult(private_key, C1)
     plaintext_converted_to_point = point_sub(C2, S)
-    print("after ------------ encoded",plaintext_converted_to_point)
+
     decrypted_decoded_point = decode_point_as_plaintext(plaintext_converted_to_point)
-    print("after ------------ decoded", decode_point_as_plaintext)
 
     # Convert the point back to bytes
     x = plaintext_converted_to_point[0].to_bytes(32, byteorder='big')
@@ -121,4 +121,17 @@ def decrypt_key(private_key, ciphertext):
     hashed_value = x + y
 
     plaintext = hashed_value[:32]  # Since only the first 32 bytes were originally used as plaintext
+    return plaintext
+"""
+
+
+def decrypt_key(private_key, ciphertext):
+    C1, C2 = ciphertext
+    S = scalar_mult(private_key, C1)
+
+    # Subtract S from C2 to get the original plaintext point
+    plaintext_point = point_sub(C2, S)
+
+    # Convert the elliptic curve point back to plaintext
+    plaintext = decode_point_as_plaintext(plaintext_point)
     return plaintext
