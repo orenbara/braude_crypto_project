@@ -1,3 +1,4 @@
+import hashlib
 import random
 
 # Elliptic curve parameters (using NIST P-256 curve)
@@ -40,6 +41,10 @@ def point_add(P1, P2):
     y3 = (lam * (P1[0] - x3) - P1[1]) % p
     return (x3, y3)
 
+def point_sub(P1, P2):
+    neg_P2 = (P2[0], -P2[1] % p)
+    return point_add(P1, neg_P2)
+
 """
 This uses the double-and-add algorithm, an efficient method for scalar multiplication
 Scalar multiplication involves computing the product of a scalar (integer) k and a point P on an elliptic curve 
@@ -69,16 +74,51 @@ def generate_keypair():
 """
 Encrypt a message (in this case, the SALSA20 key) using ECC El-Gamal encryption
 """
+
+def encode_plaintext_as_point(plaintext):
+    x = int.from_bytes(plaintext, byteorder='big') % p
+    while True:
+        y_square = (x * x * x + a * x + b) % p
+        y = pow(y_square, (p + 1) // 4, p)  # This is (p + 1) / 4 for P-256 curve
+        if (y * y) % p == y_square:
+            return (x, y)
+        x = (x + 1) % p
+
+def decode_point_as_plaintext(point):
+    x, y = point
+    return x.to_bytes(32, byteorder='big')
+
+
+
 def encrypt_key(public_key, plaintext):
     # Chooses a random k for this encryption.
     k = random.randint(1, n - 1)
     C1 = scalar_mult(k, (Gx, Gy))
     S = scalar_mult(k, public_key)
-    C2 = (plaintext * S[0]) % p
+
+    # Example 32-byte random value
+    random_value = b'\x01' * 32  # Replace with your 32-byte random value
+    print("b4 ------------ decoded",plaintext)
+
+
+    plaintext_converted_to_point = encode_plaintext_as_point(plaintext)
+
+    print("b4 ------------ encoded",plaintext_converted_to_point)
+    C2 = point_add(plaintext_converted_to_point, S)
     return (C1, C2)
 
 def decrypt_key(private_key, ciphertext):
     C1, C2 = ciphertext
     S = scalar_mult(private_key, C1)
-    plaintext = (C2 * mod_inverse(S[0], p)) % p
+    plaintext_converted_to_point = point_sub(C2, S)
+    print("after ------------ encoded",plaintext_converted_to_point)
+    decrypted_decoded_point = decode_point_as_plaintext(plaintext_converted_to_point)
+    print("after ------------ decoded", decode_point_as_plaintext)
+
+    # Convert the point back to bytes
+    x = plaintext_converted_to_point[0].to_bytes(32, byteorder='big')
+    y = plaintext_converted_to_point[1].to_bytes(32, byteorder='big')
+    hashed_value = x + y
+
+    plaintext = hashed_value[:32]  # Since only the first 32 bytes were originally used as plaintext
     return plaintext

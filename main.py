@@ -26,7 +26,7 @@ def main():
         print("SALSA20 key generated successfully.")
 
         print("Encrypting SALSA20 key with EC El-Gamal...")
-        encrypted_key = encrypt_key(ec_public_key, int.from_bytes(salsa_key, 'big'))
+        encrypted_key = encrypt_key(ec_public_key, salsa_key)
         print(f"Encrypted key: {encrypted_key}")
         print("SALSA20 key encrypted successfully.")
 
@@ -52,12 +52,12 @@ def main():
 
             print("Decrypting SALSA20 key...")
             decrypted_key = decrypt_key(ec_private_key, encrypted_key)
-            recovered_salsa_key = decrypted_key.to_bytes(32, 'big')
-            print(f"Recovered SALSA20 key: {recovered_salsa_key.hex()}")
+            #recovered_salsa_key = decrypted_key.to_bytes(32, 'big')
+            print(f"Recovered SALSA20 key: {decrypted_key.hex()}")
             print("SALSA20 key decrypted successfully.")
 
             print("Decrypting file...")
-            decrypt_file('encrypted.bin', 'decrypted.txt', recovered_salsa_key)
+            decrypt_file('encrypted.bin', 'decrypted.txt', decrypted_key)
             print("File decrypted successfully")
 
             # Verify the decrypted content
